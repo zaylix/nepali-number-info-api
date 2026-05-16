@@ -4,38 +4,74 @@ import random
 import re
 
 # Nepali Name Components
-FIRST_NAMES = ["Ram", "Shyam", "Hari", "Sita", "Gita", "Rita", "Bijay", "Sanjay", "Hemant", "Prakash", "Sunita", "Anita", "Deepak", "Sandesh", "Rohan", "Aayush", "Bishal", "Kiran", "Nabin", "Suman"]
-LAST_NAMES = ["Sharma", "Adhikari", "Bhattarai", "Khatri", "Thapa", "Magar", "Gurung", "Rai", "Limbu", "Shrestha", "Maharjan", "Bajracharya", "Pandey", "Paudel", "Gautam", "Basnet", "Yadav", "Shah", "Singh", "Jha"]
-CITIES = ["Kathmandu", "Pokhara", "Lalitpur", "Bharatpur", "Biratnagar", "Birgunj", "Janakpur", "Ghorahi", "Hetauda", "Dhangadhi", "Itahari", "Dharan", "Butwal", "Nepalgunj"]
-DISTRICTS = ["Kathmandu", "Kaski", "Lalitpur", "Chitwan", "Morang", "Parsa", "Dhanusa", "Dang", "Makwanpur", "Kailali", "Sunsari", "Rupandehi", "Banke"]
+FIRST_NAMES = ["Ram", "Shyam", "Hari", "Sita", "Gita", "Rita", "Bijay", "Sanjay", "Hemant", "Prakash", "Sunita", "Anita", "Deepak", "Sandesh", "Rohan", "Aayush", "Bishal", "Kiran", "Nabin", "Suman", "Pabitra", "Nirmala", "Kabita", "Rajesh", "Suresh", "Gopal", "Parshu"]
+MIDDLE_NAMES = ["Bahadur", "Prasad", "Kumar", "Kumari", "Devi", "Maya", "Raj", "Lal", "Nath", "Singh", "Giri", "Chandra", "Kanta"]
+LAST_NAMES = ["Sharma", "Adhikari", "Bhattarai", "Khatri", "Thapa", "Magar", "Gurung", "Rai", "Limbu", "Shrestha", "Maharjan", "Bajracharya", "Pandey", "Paudel", "Gautam", "Basnet", "Yadav", "Shah", "Singh", "Jha", "Khadka", "Mishra", "Acharya", "Dahal", "Koirala", "Oli"]
+
+CITIES = ["Kathmandu", "Pokhara", "Lalitpur", "Bharatpur", "Biratnagar", "Birgunj", "Janakpur", "Ghorahi", "Hetauda", "Dhangadhi", "Itahari", "Dharan", "Butwal", "Nepalgunj", "Bhadrapur", "Damak", "Gulariya", "Tulsipur"]
+DISTRICTS = ["Kathmandu", "Kaski", "Lalitpur", "Chitwan", "Morang", "Parsa", "Dhanusa", "Dang", "Makwanpur", "Kailali", "Sunsari", "Rupandehi", "Banke", "Jhapa", "Illam", "Bardiya", "Surkhet"]
+
+# Nepali Address Components
+LOCAL_ADDRESS_COMPONENTS = [
+    "Ward No. " + str(random.randint(1, 32)),
+    "Tole " + str(random.randint(1, 15)),
+    "Marg " + str(random.randint(1, 20)),
+    "Galli " + str(random.randint(1, 10)),
+    "Gaunpalika " + str(random.randint(1, 10)),
+    "Nagarplika " + str(random.randint(1, 10))
+]
 
 def generate_fake_nepali_data(count=100):
     fake_data = []
     for i in range(count):
-        fname = random.choice(FIRST_NAMES)
+        fname_base = random.choice(FIRST_NAMES)
+        mname = random.choice(MIDDLE_NAMES) if random.random() < 0.3 else "" # 30% chance of middle name
         lname = random.choice(LAST_NAMES)
-        name = f"{fname} {lname}"
+        
+        fname = f"{fname_base} {mname}".strip() if mname else fname_base
+        name = f"{fname} {lname}".strip()
+
         city = random.choice(CITIES)
         district = random.choice(DISTRICTS)
         
-        # Generate a random mobile number (NTC or Ncell)
-        prefix = random.choice(["984", "985", "986", "980", "981", "982"])
+        # Generate a random mobile number (NTC or Ncell or Smart)
+        prefix_options = ["984", "985", "986", "974", "975", "980", "981", "982", "961", "962", "988"]
+        prefix = random.choice(prefix_options)
         mobile = prefix + "".join([str(random.randint(0, 9)) for _ in range(7)])
         
-        address = f"{random.choice(['Ward No. ' + str(random.randint(1, 32)), 'Tole ' + str(random.randint(1, 10))])}, {city}, {district}, Nepal"
+        address = ""
+        if random.random() < 0.8: # 80% chance of having an address
+            address_components = [random.choice(LOCAL_ADDRESS_COMPONENTS), city, district, "Nepal"]
+            address = ", ".join(filter(None, address_components))
         
-        circle = "NTC" if prefix in ["984", "985", "986"] else "NCELL"
-        
-        fake_data.append({
+        circle = "UNKNOWN"
+        if prefix in ["984", "985", "986", "974", "975"]:
+            circle = "NTC"
+        elif prefix in ["980", "981", "982"]:
+            circle = "NCELL"
+        elif prefix in ["961", "962", "988"]:
+            circle = "SMART"
+
+        entry = {
             "address": address,
             "alt": "",
             "circle": circle,
-            "email": f"{fname.lower()}.{lname.lower()}{random.randint(10, 99)}@gmail.com",
+            "email": f"{fname_base.lower()}.{lname.lower()}{random.randint(10, 99)}@gmail.com" if random.random() < 0.7 else "", # 70% chance of email
             "fname": fname,
             "id": str(random.randint(100000000000, 999999999999)),
             "mobile": mobile,
-            "name": name
-        })
+            "name": name,
+            "gender": random.choice(["Male", "Female"]) if random.random() < 0.9 else "", # 90% chance of gender
+        }
+        
+        if random.random() < 0.4: # 40% chance of father's name
+            entry["father_name"] = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
+        if random.random() < 0.2: # 20% chance of spouse's name
+            entry["spouse_name"] = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
+        if random.random() < 0.15: # 15% chance of Nagrita No.
+            entry["nagrita_no"] = "".join([str(random.randint(0, 9)) for _ in range(random.randint(8, 12))])
+
+        fake_data.append(entry)
     return fake_data
 
 def process_csv(file_path):
@@ -53,10 +89,12 @@ def process_csv(file_path):
                 if len(phone) == 10:
                     prefix = phone[:3]
                     circle = "UNKNOWN"
-                    if prefix in ["984", "985", "986"]:
+                    if prefix in ["984", "985", "986", "974", "975"]:
                         circle = "NTC"
                     elif prefix in ["980", "981", "982"]:
                         circle = "NCELL"
+                    elif prefix in ["961", "962", "988"]:
+                        circle = "SMART"
                     
                     data.append({
                         "address": f"{row.get('Street addr', '')} {row.get('Locality addr', '')} {row.get('Region Addr', '')}".strip(),
@@ -74,7 +112,8 @@ def process_csv(file_path):
 
 if __name__ == "__main__":
     csv_data = process_csv("/home/ubuntu/upload/Nepallocatefamily_com2022.05.csv")
-    fake_data = generate_fake_nepali_data(200)
+    # Generate 700 new fake entries
+    fake_data = generate_fake_nepali_data(700)
     
     combined_data = csv_data + fake_data
     
