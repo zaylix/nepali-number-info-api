@@ -2,6 +2,10 @@ import csv
 import json
 import random
 import re
+import os
+
+# Get the directory where the script is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Nepali Name Components
 FIRST_NAMES = ["Ram", "Shyam", "Hari", "Sita", "Gita", "Rita", "Bijay", "Sanjay", "Hemant", "Prakash", "Sunita", "Anita", "Deepak", "Sandesh", "Rohan", "Aayush", "Bishal", "Kiran", "Nabin", "Suman", "Pabitra", "Nirmala", "Kabita", "Rajesh", "Suresh", "Gopal", "Parshu"]
@@ -76,6 +80,10 @@ def generate_fake_nepali_data(count=100):
 
 def process_csv(file_path):
     data = []
+    if not os.path.exists(file_path):
+        print(f"CSV file not found at {file_path}. Skipping CSV processing.")
+        return data
+        
     try:
         with open(file_path, mode='r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter=';')
@@ -111,13 +119,30 @@ def process_csv(file_path):
     return data
 
 if __name__ == "__main__":
-    csv_data = process_csv("/home/ubuntu/upload/Nepallocatefamily_com2022.05.csv")
+    # Use relative path for CSV if it exists in the same repo, otherwise skip
+    csv_path = os.path.join(BASE_DIR, "Nepallocatefamily_com2022.05.csv")
+    csv_data = process_csv(csv_path)
+    
+    # Load existing database if it exists to append new data
+    db_path = os.path.join(BASE_DIR, "database.json")
+    existing_data = []
+    if os.path.exists(db_path):
+        with open(db_path, "r") as f:
+            existing_data = json.load(f)
+    
     # Generate 700 new fake entries
-    fake_data = generate_fake_nepali_data(700)
+    new_fake_data = generate_fake_nepali_data(700)
     
-    combined_data = csv_data + fake_data
+    # Combine everything, avoiding duplicates based on mobile number
+    seen_mobiles = {entry["mobile"] for entry in existing_data}
+    combined_data = existing_data
     
-    with open("database.json", "w") as f:
+    for entry in csv_data + new_fake_data:
+        if entry["mobile"] not in seen_mobiles:
+            combined_data.append(entry)
+            seen_mobiles.add(entry["mobile"])
+    
+    with open(db_path, "w") as f:
         json.dump(combined_data, f, indent=2)
     
-    print(f"Database created with {len(combined_data)} entries.")
+    print(f"Database updated. Total entries: {len(combined_data)}")

@@ -14,19 +14,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load database
-DB_PATH = "database.json"
-if os.path.exists(DB_PATH):
-    with open(DB_PATH, "r") as f:
-        database = json.load(f)
-else:
-    database = []
+# Load database using relative path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "database.json")
+
+def load_database():
+    if os.path.exists(DB_PATH):
+        with open(DB_PATH, "r") as f:
+            return json.load(f)
+    return []
+
+database = load_database()
 
 def validate_nepali_number(number: str):
-    # Basic validation for Nepali mobile numbers
-    # NTC: 984, 985, 986, 974, 975
-    # Ncell: 980, 981, 982
-    # Smart: 961, 962, 988
     if not number.isdigit() or len(number) != 10:
         return False, "Invalid length or format"
     
@@ -46,17 +46,16 @@ def read_root():
 
 @app.get("/api/v1/key={key}/number={number}")
 def get_number_info(key: str, number: str):
-    # Simple key validation (you can expand this)
     if key != "diwazz":
         return {"success": False, "message": "Invalid API Key"}
 
     is_valid, operator = validate_nepali_number(number)
     
-    # Search in database
-    results = [entry for entry in database if entry["mobile"] == number]
+    # Reload database to get latest updates from hourly script
+    current_db = load_database()
+    results = [entry for entry in current_db if entry["mobile"] == number]
     
     if not results:
-        # If not found, return a placeholder or fake-looking response if it's a valid number
         if is_valid:
             return {
                 "data": [
