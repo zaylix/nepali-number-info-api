@@ -20,10 +20,15 @@ DB_PATH = os.path.join(BASE_DIR, "database.json")
 
 def load_database():
     if os.path.exists(DB_PATH):
-        with open(DB_PATH, "r") as f:
-            return json.load(f)
+        try:
+            with open(DB_PATH, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading database: {e}")
+            return []
     return []
 
+# Initial load
 database = load_database()
 
 def validate_nepali_number(number: str):
@@ -31,7 +36,8 @@ def validate_nepali_number(number: str):
         return False, "Invalid length or format"
     
     prefix = number[:3]
-    if prefix in ["984", "985", "986", "974", "975"]:
+    # Updated NTC and Ncell prefixes
+    if prefix in ["984", "985", "986", "974", "975", "976", "972"]:
         return True, "NTC"
     elif prefix in ["980", "981", "982"]:
         return True, "NCELL"
@@ -51,7 +57,7 @@ def get_number_info(key: str, number: str):
 
     is_valid, operator = validate_nepali_number(number)
     
-    # Reload database to get latest updates from hourly script
+    # Reload database to get latest updates
     current_db = load_database()
     results = [entry for entry in current_db if entry["mobile"] == number]
     
@@ -86,4 +92,4 @@ def get_number_info(key: str, number: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

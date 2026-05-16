@@ -3,13 +3,8 @@ import random
 import os
 
 # Load names from the downloaded file
-NAMES_FILE = "/home/ubuntu/nepali_names.txt"
-if not os.path.exists(NAMES_FILE):
-    # Fallback if the file is not in the expected location
-    ALL_NAMES = ["Ram", "Shyam", "Hari", "Sita", "Gita", "Rita", "Bijay", "Sanjay", "Hemant", "Prakash"]
-else:
-    with open(NAMES_FILE, "r") as f:
-        ALL_NAMES = [line.strip() for line in f if line.strip()]
+with open("/home/ubuntu/nepali_names.txt", "r") as f:
+    ALL_NAMES = [line.strip() for line in f if line.strip()]
 
 SURNAMES = ["Sharma", "Adhikari", "Bhattarai", "Khatri", "Thapa", "Magar", "Gurung", "Rai", "Limbu", "Shrestha", "Maharjan", "Bajracharya", "Pandey", "Paudel", "Gautam", "Basnet", "Yadav", "Shah", "Singh", "Jha", "Khadka", "Mishra", "Acharya", "Dahal", "Koirala", "Oli", "Poudel", "Bhandari", "Lamsal", "Regmi", "Subedi", "Aryal", "Neupane", "Ghimire", "Bastola", "Baniya", "Bohara", "Budhathoki", "Chhetri", "Dhakal", "Karki", "Kunwar", "Lamichhane", "Mainali", "Pant", "Prasai", "Pyakurel", "Rana", "Rimal", "Sapkota", "Silwal", "Upreti", "Wagle"]
 MIDDLE_NAMES = ["Bahadur", "Prasad", "Kumar", "Kumari", "Devi", "Maya", "Raj", "Lal", "Nath", "Singh", "Giri", "Chandra", "Kanta", "Man", "Maya", "Sari"]
@@ -55,50 +50,44 @@ def generate_entry(mobile):
     return entry
 
 def main():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, "database.json")
+    db_path = "/home/ubuntu/nepali-number-info-api/database.json"
+    target_size_mb = 55 # Aim for slightly over 50MB
     
-    # Load existing data
-    if os.path.exists(db_path):
-        with open(db_path, "r") as f:
-            data = json.load(f)
-    else:
-        data = []
-    
-    seen_mobiles = {entry["mobile"] for entry in data}
+    # Track name counts to limit repeats to 100
     name_counts = {}
-    for entry in data:
-        name_counts[entry["name"]] = name_counts.get(entry["name"], 0) + 1
     
-    # Generate 14000+ new entries as requested
-    new_entries_count = 14500
+    data = []
+    current_size = 0
+    
+    # Prefixes for NTC and Ncell
     prefixes = ["984", "985", "986", "974", "975", "976", "980", "981", "982"]
     
-    added = 0
-    attempts = 0
-    while added < new_entries_count and attempts < new_entries_count * 2:
-        attempts += 1
+    print("Generating data...")
+    while current_size < target_size_mb * 1024 * 1024:
         prefix = random.choice(prefixes)
         mobile = prefix + "".join([str(random.randint(0, 9)) for _ in range(7)])
         
-        if mobile in seen_mobiles:
-            continue
-            
         entry = generate_entry(mobile)
         
-        # Limit name repeats to 100
-        if name_counts.get(entry["name"], 0) >= 100:
+        # Limit name repeats
+        full_name = entry["name"]
+        if name_counts.get(full_name, 0) >= 100:
             continue
-            
+        
+        name_counts[full_name] = name_counts.get(full_name, 0) + 1
         data.append(entry)
-        seen_mobiles.add(mobile)
-        name_counts[entry["name"]] = name_counts.get(entry["name"], 0) + 1
-        added += 1
+        
+        # Periodically check size (every 5000 entries)
+        if len(data) % 5000 == 0:
+            temp_json = json.dumps(data)
+            current_size = len(temp_json)
+            print(f"Current size: {current_size / (1024*1024):.2f} MB ({len(data)} entries)")
 
     with open(db_path, "w") as f:
         json.dump(data, f)
     
-    print(f"Added {added} new entries. Total entries: {len(data)}")
+    print(f"Final database size: {os.path.getsize(db_path) / (1024*1024):.2f} MB")
+    print(f"Total entries: {len(data)}")
 
 if __name__ == "__main__":
     main()
